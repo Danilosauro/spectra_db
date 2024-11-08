@@ -71,7 +71,7 @@ def update_listbox(records=None):
         cursor.execute("SELECT * FROM spectra")
         records = cursor.fetchall()
     for record in records:
-        listbox.insert(tk.END, f"{record[0]} - {record[1]} - {record[8]}")
+        listbox.insert(tk.END, " - ".join([str(item) for item in record]))
     conn.close()
 
 def delete_record():
