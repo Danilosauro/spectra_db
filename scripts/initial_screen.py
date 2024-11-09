@@ -26,7 +26,7 @@ def open_database():
         messagebox.showerror("Erro", f"Ocorreu um erro inesperado: {e}")
 
 root = tk.Tk()
-root.title("Tela Inicial - Conversão e Banco de Dados")
+root.title("NP3 SPECTRA DB")
 
 root.geometry("400x250") 
 root.resizable(False, False)

@@ -1,5 +1,6 @@
 import sqlite3
 import tkinter as tk
+import pandas as pd
 from tkinter import messagebox, filedialog, ttk
 import csv
 from models import init_db
@@ -24,6 +25,7 @@ def create_record():
 
     conn = sqlite3.connect('database/spectra_db.sqlite')
     cursor = conn.cursor()
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_filename ON spectra (FILENAME)")
     cursor.execute('''
         INSERT INTO spectra (
             FILENAME, PEPMASS, CHARGE, UNPD_ID, MOLECULAR_FORMULA, IONMODE, EXACTMASS, NAME, SMILES, 
@@ -35,6 +37,11 @@ def create_record():
     conn.close()
     messagebox.showinfo("Sucesso", "Registro inserido com sucesso!")
     update_treeview()
+    clear_entries()  
+
+def clear_entries():
+    for entry in entries.values():
+        entry.delete(0, tk.END)  
 
 def insert_csv_data():
     csv_file_path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])
@@ -57,6 +64,35 @@ def insert_csv_data():
                 ''', row)
         conn.commit()
         messagebox.showinfo("Sucesso", "Dados do CSV inseridos com sucesso!")
+        update_treeview()
+    except Exception as e:
+        messagebox.showerror("Erro", f"Ocorreu um erro: {e}")
+    finally:
+        conn.close()
+
+def insert_parquet_data():
+    parquet_file_path = filedialog.askopenfilename(filetypes=[("Parquet files", "*.parquet")])
+    if not parquet_file_path:
+        return
+
+    conn = sqlite3.connect('database/spectra_db.sqlite')
+    cursor = conn.cursor()
+
+    try:
+        df = pd.read_parquet(parquet_file_path)
+        for _, row in df.iterrows():
+            cursor.execute('''
+                INSERT INTO spectra (
+                    FILENAME, PEPMASS, CHARGE, UNPD_ID, MOLECULAR_FORMULA, IONMODE, EXACTMASS, NAME, 
+                    SMILES, INCHI, INCHIAUX, SCANS, MZ, INTENSITY
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                row['FILENAME'], row['PEPMASS'], row['CHARGE'], row['UNPD_ID'], row['MOLECULAR_FORMULA'],
+                row['IONMODE'], row['EXACTMASS'], row['NAME'], row['SMILES'], row['INCHI'],
+                row['INCHIAUX'], row['SCANS'], row['MZ'], row['INTENSITY']
+            ))
+        conn.commit()
+        messagebox.showinfo("Sucesso", "Dados do Parquet inseridos com sucesso!")
         update_treeview()
     except Exception as e:
         messagebox.showerror("Erro", f"Ocorreu um erro: {e}")
@@ -113,7 +149,7 @@ def refresh_treeview():
 
 # tkinter interface
 root = tk.Tk()
-root.title("CRUD CHEM STRUCTURE")
+root.title("NP3 SPECTRA DB")
 root.geometry("1200x600")
 
 labels = ["ID", "FILENAME", "PEPMASS", "CHARGE", "UNPD_ID", "MOLECULAR_FORMULA", "IONMODE", "EXACTMASS", "NAME", 
@@ -132,14 +168,15 @@ for i, label in enumerate(labels[1:]):
 tk.Button(root, text="Criar Registro", command=create_record).grid(row=15, column=0, padx=5, pady=5)
 tk.Button(root, text="Deletar Registro", command=delete_record).grid(row=15, column=1, padx=5, pady=5)
 tk.Button(root, text="Carregar CSV", command=insert_csv_data).grid(row=15, column=2, padx=5, pady=5)
-tk.Button(root, text="Refresh", command=refresh_treeview).grid(row=15, column=3, padx=5, pady=5)
+tk.Button(root, text="Carregar Parquet", command=insert_parquet_data).grid(row=15, column=3, padx=5, pady=5)
+tk.Button(root, text="Buscar", command=search_record).grid(row=16, column=1, padx=5, pady=5)
+tk.Button(root, text="Refresh", command=refresh_treeview).grid(row=16, column=3, padx=5, pady=5)
 
 tk.Label(root, text="Buscar por FILENAME:").grid(row=16, column=0, sticky="w", padx=5, pady=5)
 entry_search_filename = tk.Entry(root, width=30)
 entry_search_filename.grid(row=16, column=1, padx=5, pady=5)
 tk.Button(root, text="Buscar", command=search_record).grid(row=16, column=2, padx=5, pady=5)
 
-# database header
 frame = tk.Frame(root)
 frame.grid(row=17, column=0, columnspan=4, padx=5, pady=5, sticky="nsew")
 
