@@ -2,7 +2,7 @@ import sqlite3
 
 def init_db():
    
-    conn = sqlite3.connect('spectra_db.sqlite')
+    conn = sqlite3.connect('database/spectra_db.sqlite')
     cursor = conn.cursor()
 
     cursor.execute('''

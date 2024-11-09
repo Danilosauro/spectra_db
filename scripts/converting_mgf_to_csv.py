@@ -54,4 +54,4 @@ def mgf_to_csv_folder(input_folder, output_csv):
                             intensity_values.append(intensity)
 
 
-mgf_to_csv_folder("mgf_data", "src/output.csv")
+mgf_to_csv_folder("./mgf_data", "source/output.csv")
