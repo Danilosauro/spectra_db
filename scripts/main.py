@@ -1,4 +1,4 @@
-import sqlite3
+import psycopg2
 import tkinter as tk
 import pandas as pd
 from tkinter import messagebox, filedialog, ttk
@@ -7,85 +7,101 @@ from models import init_db
 
 init_db()
 
-def create_record():
-    filename = entry_filename.get().strip() or None
-    pepmass = float(entry_pepmass.get().strip()) if entry_pepmass.get().strip() else None
-    charge = entry_charge.get().strip() or None
-    unpd_id = entry_unpd_id.get().strip() or None
-    molecular_formula = entry_molecular_formula.get().strip() or None
-    ionmode = entry_ionmode.get().strip() or None
-    exactmass = float(entry_exactmass.get().strip()) if entry_exactmass.get().strip() else None
-    name = entry_name.get().strip() or None
-    smiles = entry_smiles.get().strip() or None
-    inchi = entry_inchi.get().strip() or None
-    inchiaux = entry_inchiaux.get().strip() or None
-    scans = int(entry_scans.get().strip()) if entry_scans.get().strip() else None
-    mz = float(entry_mz.get().strip()) if entry_mz.get().strip() else None
-    intensity = float(entry_intensity.get().strip()) if entry_intensity.get().strip() else None
+current_table = "spectra"
 
-    conn = sqlite3.connect('database/spectra_db.sqlite')
+def get_connection():
+    return psycopg2.connect(
+        dbname="spectra_db",
+        user="postgres",
+        password="admin",
+        host="localhost",
+        port="5432"
+    )
+
+def toggle_table_view():
+    global current_table
+    current_table = "UNPD" if current_table == "spectra" else "spectra"
+    update_treeview(current_table)
+    messagebox.showinfo("Visualização Alterada", f"Visualizando dados da tabela {current_table}")
+
+def search_records():
+    query = entry_search.get().strip()
+    if not query:
+        messagebox.showwarning("Busca Vazia", "Por favor, insira um termo de busca.")
+        return
+    
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(f"SELECT * FROM {current_table} WHERE FILENAME ILIKE %s", (f"%{query}%",))
+    records = cursor.fetchall()
+    conn.close()
+    update_treeview(current_table, records)
+
+def refresh_treeview():
+    update_treeview()
+
+def create_record():
+    data = {key: entry.get().strip() or None for key, entry in entries.items()}
+    data["PEPMASS"] = float(data["PEPMASS"]) if data["PEPMASS"] else None
+    data["EXACTMASS"] = float(data["EXACTMASS"]) if data["EXACTMASS"] else None
+    data["SCANS"] = int(data["SCANS"]) if data["SCANS"] else None
+    data["MZ"] = float(data["MZ"]) if data["MZ"] else None
+    data["INTENSITY"] = float(data["INTENSITY"]) if data["INTENSITY"] else None
+
+    conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_filename ON spectra (FILENAME)")
-    cursor.execute('''
-        INSERT INTO spectra (
-            FILENAME, PEPMASS, CHARGE, UNPD_ID, MOLECULAR_FORMULA, IONMODE, EXACTMASS, NAME, SMILES, 
-            INCHI, INCHIAUX, SCANS, MZ, INTENSITY
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (filename, pepmass, charge, unpd_id, molecular_formula, ionmode, exactmass, name, smiles, inchi, inchiaux, scans, mz, intensity))
+    cursor.execute(f'''
+        INSERT INTO {current_table} (FILENAME, PEPMASS, CHARGE, UNPD_ID, MOLECULAR_FORMULA, IONMODE, EXACTMASS, NAME, 
+        SMILES, INCHI, INCHIAUX, SCANS, MZ, INTENSITY) 
+        VALUES (%(FILENAME)s, %(PEPMASS)s, %(CHARGE)s, %(UNPD_ID)s, %(MOLECULAR_FORMULA)s, %(IONMODE)s, %(EXACTMASS)s, 
+        %(NAME)s, %(SMILES)s, %(INCHI)s, %(INCHIAUX)s, %(SCANS)s, %(MZ)s, %(INTENSITY)s)
+    ''', data)
     
     conn.commit()
     conn.close()
     messagebox.showinfo("Sucesso", "Registro inserido com sucesso!")
-    update_treeview()
-    clear_entries()  
-
-def clear_entries():
-    for entry in entries.values():
-        entry.delete(0, tk.END)  
+    update_treeview(current_table)
+    clear_entries()
 
 def insert_csv_data():
     csv_file_path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])
     if not csv_file_path:
         return
 
-    conn = sqlite3.connect('database/spectra_db.sqlite')
+    conn = get_connection()
     cursor = conn.cursor()
 
-    try:
-        with open(csv_file_path, 'r') as csv_file:
-            csv_reader = csv.reader(csv_file)
-            next(csv_reader)
-            for row in csv_reader:
-                cursor.execute('''
-                    INSERT INTO spectra (
-                        FILENAME, PEPMASS, CHARGE, UNPD_ID, MOLECULAR_FORMULA, IONMODE, EXACTMASS, NAME, 
-                        SMILES, INCHI, INCHIAUX, SCANS, MZ, INTENSITY
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ''', row)
-        conn.commit()
-        messagebox.showinfo("Sucesso", "Dados do CSV inseridos com sucesso!")
-        update_treeview()
-    except Exception as e:
-        messagebox.showerror("Erro", f"Ocorreu um erro: {e}")
-    finally:
-        conn.close()
+    with open(csv_file_path, 'r') as csv_file:
+        csv_reader = csv.reader(csv_file)
+        next(csv_reader)
+        for row in csv_reader:
+            cursor.execute(f'''
+                INSERT INTO {current_table} (FILENAME, PEPMASS, CHARGE, UNPD_ID, MOLECULAR_FORMULA, IONMODE, EXACTMASS, 
+                NAME, SMILES, INCHI, INCHIAUX, SCANS, MZ, INTENSITY) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 
+                %s, %s, %s)
+            ''', row)
+    conn.commit()
+    conn.close()
+    messagebox.showinfo("Sucesso", "Dados do CSV inseridos com sucesso!")
+    update_treeview(current_table)
 
 def insert_parquet_data():
     parquet_file_path = filedialog.askopenfilename(filetypes=[("Parquet files", "*.parquet")])
     if not parquet_file_path:
         return
 
-    conn = sqlite3.connect('database/spectra_db.sqlite')
+    conn = get_connection()
     cursor = conn.cursor()
 
     try:
         df = pd.read_parquet(parquet_file_path)
         for _, row in df.iterrows():
-            cursor.execute('''
-                INSERT INTO spectra (
+            cursor.execute(f'''
+                INSERT INTO UNPD (
                     FILENAME, PEPMASS, CHARGE, UNPD_ID, MOLECULAR_FORMULA, IONMODE, EXACTMASS, NAME, 
                     SMILES, INCHI, INCHIAUX, SCANS, MZ, INTENSITY
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ''', (
                 row['FILENAME'], row['PEPMASS'], row['CHARGE'], row['UNPD_ID'], row['MOLECULAR_FORMULA'],
                 row['IONMODE'], row['EXACTMASS'], row['NAME'], row['SMILES'], row['INCHI'],
@@ -93,26 +109,11 @@ def insert_parquet_data():
             ))
         conn.commit()
         messagebox.showinfo("Sucesso", "Dados do Parquet inseridos com sucesso!")
-        update_treeview()
+        update_treeview("UNPD")
     except Exception as e:
         messagebox.showerror("Erro", f"Ocorreu um erro: {e}")
     finally:
         conn.close()
-
-def update_treeview(records=None):
-    for row in tree.get_children():
-        tree.delete(row)
-    
-    conn = sqlite3.connect('database/spectra_db.sqlite')
-    cursor = conn.cursor()
-    if records is None:
-        cursor.execute("SELECT * FROM spectra")
-        records = cursor.fetchall()
-    
-    for record in records:
-        tree.insert("", "end", values=record)
-    
-    conn.close()
 
 def delete_record():
     selected_item = tree.selection()
@@ -121,36 +122,33 @@ def delete_record():
         return
 
     record_id = tree.item(selected_item)['values'][0]
-    conn = sqlite3.connect('database/spectra_db.sqlite')
+    conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM spectra WHERE id=?", (record_id,))
+    cursor.execute(f"DELETE FROM {current_table} WHERE id=%s", (record_id,))
     conn.commit()
     conn.close()
     messagebox.showinfo("Sucesso", "Registro deletado!")
-    update_treeview()
+    update_treeview(current_table)
 
-def search_record():
-    filename = entry_search_filename.get().strip()
-    if not filename:
-        messagebox.showwarning("Atenção", "Por favor, insira um FILENAME para buscar.")
-        return
-    conn = sqlite3.connect('database/spectra_db.sqlite')
+def update_treeview(table="spectra", records=None):
+    for row in tree.get_children():
+        tree.delete(row)
+    
+    conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM spectra WHERE FILENAME=?", (filename,))
-    records = cursor.fetchall()
+    if records is None:
+        cursor.execute(f"SELECT * FROM {table}")
+        records = cursor.fetchall()
+    
+    for record in records:
+        tree.insert("", "end", values=record)
+    
     conn.close()
-    if records:
-        update_treeview(records)
-    else:
-        messagebox.showinfo("Resultado", "Nenhum registro encontrado.")
 
-def refresh_treeview():
-    update_treeview()
-
-# tkinter interface
+# Interface Tkinter
 root = tk.Tk()
 root.title("NP3 SPECTRA DB")
-root.geometry("1200x600")
+root.geometry("1200x650")
 
 labels = ["ID", "FILENAME", "PEPMASS", "CHARGE", "UNPD_ID", "MOLECULAR_FORMULA", "IONMODE", "EXACTMASS", "NAME", 
           "SMILES", "INCHI", "INCHIAUX", "SCANS", "MZ", "INTENSITY"]
@@ -162,23 +160,24 @@ for i, label in enumerate(labels[1:]):
     entry.grid(row=i, column=1, padx=5, pady=5)
     entries[label] = entry
 
-(entry_filename, entry_pepmass, entry_charge, entry_unpd_id, entry_molecular_formula, entry_ionmode, entry_exactmass,
- entry_name, entry_smiles, entry_inchi, entry_inchiaux, entry_scans, entry_mz, entry_intensity) = entries.values()
+tk.Label(root, text="Buscar FILENAME:").grid(row=0, column=3, sticky="w", padx=5, pady=5)
+entry_search = tk.Entry(root, width=30)
+entry_search.grid(row=0, column=4, padx=5, pady=5)
+tk.Button(root, text="Buscar", command=search_records).grid(row=0, column=5, padx=5, pady=5)
 
-tk.Button(root, text="Criar Registro", command=create_record).grid(row=15, column=0, padx=5, pady=5)
-tk.Button(root, text="Deletar Registro", command=delete_record).grid(row=15, column=1, padx=5, pady=5)
-tk.Button(root, text="Carregar CSV", command=insert_csv_data).grid(row=15, column=2, padx=5, pady=5)
-tk.Button(root, text="Carregar Parquet", command=insert_parquet_data).grid(row=15, column=3, padx=5, pady=5)
-tk.Button(root, text="Buscar", command=search_record).grid(row=16, column=1, padx=5, pady=5)
-tk.Button(root, text="Refresh", command=refresh_treeview).grid(row=16, column=3, padx=5, pady=5)
+button_frame = tk.Frame(root)
+button_frame.grid(row=15, column=0, columnspan=6, pady=10, sticky="ew")
 
-tk.Label(root, text="Buscar por FILENAME:").grid(row=16, column=0, sticky="w", padx=5, pady=5)
-entry_search_filename = tk.Entry(root, width=30)
-entry_search_filename.grid(row=16, column=1, padx=5, pady=5)
-tk.Button(root, text="Buscar", command=search_record).grid(row=16, column=2, padx=5, pady=5)
+tk.Button(button_frame, text="Criar Registro", command=create_record).grid(row=0, column=0, padx=5, pady=5)
+tk.Button(button_frame, text="Deletar Registro", command=delete_record).grid(row=0, column=1, padx=5, pady=5)
+tk.Button(button_frame, text="Carregar CSV", command=insert_csv_data).grid(row=0, column=2, padx=5, pady=5)
+tk.Button(button_frame, text="Carregar dados UNPD", command=insert_parquet_data).grid(row=0, column=3, padx=5, pady=5)
+tk.Button(button_frame, text="Alternar Tabela", command=toggle_table_view).grid(row=0, column=4, padx=5, pady=5)
+tk.Button(button_frame, text="Atualizar", command=refresh_treeview).grid(row=0, column=5, padx=5, pady=5)
+
 
 frame = tk.Frame(root)
-frame.grid(row=17, column=0, columnspan=4, padx=5, pady=5, sticky="nsew")
+frame.grid(row=16, column=0, columnspan=6, padx=5, pady=5, sticky="nsew")
 
 tree = ttk.Treeview(frame, columns=labels, show="headings")
 for label in labels:
@@ -196,10 +195,7 @@ scrollbar_x.pack(side=tk.BOTTOM, fill=tk.X)
 
 update_treeview()
 
-root.grid_rowconfigure(17, weight=1)
+root.grid_rowconfigure(16, weight=1)
 root.grid_columnconfigure(0, weight=1)
-root.grid_columnconfigure(1, weight=1)
-root.grid_columnconfigure(2, weight=1)
-root.grid_columnconfigure(3, weight=1)
 
 root.mainloop()
