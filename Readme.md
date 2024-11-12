@@ -10,9 +10,11 @@ O `spectra_db` é uma aplicação para processamento e análise de dados de espe
 
 ### Instalação das Dependências
 
-Para instalar as dependências Python necessárias, execute o seguinte comando: pip install -r requirements.txt 
+Para instalar as dependências Python necessárias, execute o comando: pip install -r requirements.txt
 
-## Estrutura do projeto
+### Estrutura do projeto
+
+```bash
 .
 ├── insert_your_new_mgf_data       # Diretório para adicionar novos arquivos MGF para processamento
 │   ├── UNPD_mgf_01.mgf
@@ -34,7 +36,7 @@ Para instalar as dependências Python necessárias, execute o seguinte comando: 
 └── unpd_mgf_data                  # Diretório contendo o arquivo Parquet gerado
     └── mgf_output.parquet
 
-
+```
 ## Como Executar o Projeto
 
 1. Certifique-se de que o **PostgreSQL 16** está instalado e em execução.
@@ -43,21 +45,17 @@ Para instalar as dependências Python necessárias, execute o seguinte comando: 
    - **No Windows**: execute `run_program.bat`
    - **No Linux/Mac**: execute `run_program.sh`
 
-## Caso deseje subir dados individualmente, basta inserir os campos na interface denominada "Banco de Dados".
-## Caso deseje subir os seus dados pessoais em batch, após conversão de formato .mgf para .csv., eles se encontrarão na pasta source.
-## Caso deseje, é possível subir o arquivo em formato.parquet presente na pasta unpd_mgf_data, referente aos dados do unpd. (Este carregamento é custoso devido ao volume de dados.)
+Esses scripts iniciarão a aplicação, realizando a conversão dos arquivos MGF em CSV (salvos no diretório `source`) e gerando o arquivo Parquet correspondente em `unpd_mgf_data`.
 
 ## Scripts Principais
 
 - **converting_mgf_to_csv.py**: Converte arquivos MGF para o formato CSV.
-
 - **initial_screen.py**: Tela inicial do programa, onde o usuário pode iniciar o processo de conversão e visualizar os dados.
-
 - **main.py**: Controla o fluxo principal do programa.
-
 - **models.py**: Define os modelos de dados e as operações de banco de dados para armazenar e manipular os dados convertidos.
 
 ## Dados Processados
 
 - **source/mgf_output.csv**: Contém os dados convertidos dos arquivos MGF no formato CSV.
 - **unpd_mgf_data/mgf_output.parquet**: Arquivo Parquet contendo os dados em um formato otimizado para análise e armazenamento.
+
