@@ -57,5 +57,5 @@ Esses scripts iniciarão a aplicação, realizando a conversão dos arquivos MGF
 ## Dados Processados
 
 - **source/mgf_output.csv**: Contém os dados convertidos dos arquivos MGF no formato CSV.
-- **unpd_mgf_data/mgf_output.parquet**: Arquivo Parquet contendo os dados em um formato otimizado para análise e armazenamento.
+- **unpd_mgf_data/mgf_output.parquet**: Arquivo Parquet contendo os dados do UNPD em um formato otimizado para análise e armazenamento.
 
