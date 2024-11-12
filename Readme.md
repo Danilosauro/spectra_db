@@ -46,7 +46,9 @@ pip install -r requirements.txt
    - **No Windows**: execute `run_program.bat`
    - **No Linux/Mac**: execute `run_program.sh`
 
-Esses scripts iniciarão a aplicação, realizando a conversão dos arquivos MGF em CSV (salvos no diretório `source`) e gerando o arquivo Parquet correspondente em `unpd_mgf_data`.
+## Caso deseje subir dados individualmente, basta inserir os campos na interface denominada "Banco de Dados".
+## Caso deseje subir os seus dados pessoais em batch, após conversão de formato .mgf para .csv., eles se encontrarão na pasta source.
+## Caso deseje, é possível subir o arquivo em formato.parquet presente na pasta unpd_mgf_data, referente aos dados do unpd. (Este carregamento é custoso devido ao volume de dados.)
 
 ## Scripts Principais
 
