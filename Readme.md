@@ -12,8 +12,6 @@ O `spectra_db` é uma aplicação para processamento e análise de dados de espe
 
 Para instalar as dependências Python necessárias, execute o seguinte comando: pip install -r requirements.txt 
 
-```bash
-
 ## Estrutura do projeto
 .
 ├── insert_your_new_mgf_data       # Diretório para adicionar novos arquivos MGF para processamento
