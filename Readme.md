@@ -10,10 +10,9 @@ O `spectra_db` é uma aplicação para processamento e análise de dados de espe
 
 ### Instalação das Dependências
 
-Para instalar as dependências Python necessárias, execute o seguinte comando:
+Para instalar as dependências Python necessárias, execute o seguinte comando: pip install -r requirements.txt 
 
 ```bash
-pip install -r requirements.txt 
 
 ## Estrutura do projeto
 .
