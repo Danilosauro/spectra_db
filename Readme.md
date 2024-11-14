@@ -45,7 +45,7 @@ Para instalar as dependências Python necessárias, execute o comando: pip insta
    - **No Windows**: execute `run_program.bat`
    - **No Linux/Mac**: execute `run_program.sh`
 
-Esses scripts iniciarão a aplicação, realizando a conversão dos arquivos MGF em CSV (salvos no diretório `source`) e gerando o arquivo Parquet correspondente em `unpd_mgf_data`.
+Esses scripts iniciarão a aplicação, realizando a conversão dos arquivos MGF em CSV (salvos no diretório `source`).
 
 ## Scripts Principais
 
