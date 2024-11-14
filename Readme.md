@@ -39,7 +39,7 @@ Para instalar as dependências Python necessárias, execute o comando: pip insta
 ```
 ## Como Executar o Projeto
 
-1. Certifique-se de que o **PostgreSQL 16** está instalado e em execução.
+1. Certifique-se de que o **PostgreSQL 16** está instalado e em execução. (user: postgres, password: admin)
 2. Coloque os arquivos MGF que deseja processar no diretório `insert_your_new_mgf_data`.
 3. Execute o programa:
    - **No Windows**: execute `run_program.bat`
